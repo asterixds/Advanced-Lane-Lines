@@ -402,8 +402,8 @@ The lane detection and curve plots are illustrated below.
 ```python
 
 img = mpimg.imread('test_images/test3.jpg')
-#if len(img.shape) > 2 and img.shape[2] == 4:
-#    img = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
+if len(img.shape) > 2 and img.shape[2] == 4:
+    img = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
 undistorted = undistort(img)
 showimage(undistorted)
 binarized = binarize(undistorted)
@@ -462,7 +462,7 @@ Here's a link to my video result:
 
 ```python
 from IPython.display import YouTubeVideo
-YouTubeVideo('zXorXzTaDHI')
+YouTubeVideo('NfIfQjMMCR4')
 ```
 
 
@@ -472,7 +472,7 @@ YouTubeVideo('zXorXzTaDHI')
         <iframe
             width="400"
             height="300"
-            src="https://www.youtube.com/embed/zXorXzTaDHI"
+            src="https://www.youtube.com/embed/NfIfQjMMCR4"
             frameborder="0"
             allowfullscreen
         ></iframe>
