@@ -1,5 +1,3 @@
-from os import makedirs
-from os.path import join, exists
 import numpy as np
 
 SRC = np.float32([[580, 460],[700, 460],[1040, 680],[260, 680]])

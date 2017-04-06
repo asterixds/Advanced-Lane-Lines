@@ -36,17 +36,19 @@ def threshold(img, thresh = (0,255)):
     binary_img[(img >= thresh[0]) & (img <= thresh[1])] = 1
     return binary_img
 
-def gradients_abs(gray,sobel_kernel=15 ):
+def __gradients_abs(gray,sobel_kernel=15 ):
     gx_abs = np.abs(cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=sobel_kernel))
     gy_abs = np.abs(cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=sobel_kernel))
     return gx_abs, gy_abs
 
-def mag_thresh( gx_abs, gy_abs, thresh=(50,255)):
+def mag_thresh( gray, sobel_kernel=15, thresh=(50,255)):
+    gx_abs, gy_abs = __gradients_abs(gray,sobel_kernel)
     gmag = np.sqrt(gx_abs**2 + gy_abs**2)
     gmag= scale(gmag)
     return threshold(gmag,thresh)
 
-def dir_thresh( gx_abs, gy_abs, thresh=(0.7,1.2)):
+def dir_thresh( gray, sobel_kernel=15, thresh=(0.7,1.2)):
+    gx_abs, gy_abs = __gradients_abs(gray,sobel_kernel)
     gdir = np.arctan2(gy_abs, gx_abs)
     return threshold(gdir, thresh)
 
@@ -63,6 +65,22 @@ def hls_decompose(img):
     l = hsv[:,:,1]
     s = hsv[:,:,2]
     return h,l,s
+
+def lab_decompose(img):
+    lab = cv2.cvtColor(img, cv2.COLOR_RGB2Lab).astype(np.float)
+    print(lab)
+    l = lab[:,:,0]
+    a = lab[:,:,1]
+    b = lab[:,:,2]
+    return l,a,b
+
+def luv_decompose(img):
+    luv = cv2.cvtColor(img, cv2.COLOR_RGB2Luv).astype(np.float)
+    print(luv)
+    l = luv[:,:,0]
+    u = luv[:,:,1]
+    v = luv[:,:,2]
+    return l,u,v
  
 def filter_colours( img):
     img = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
@@ -79,12 +97,32 @@ def filter_colours( img):
     binary_img[((y_mask != 0) | (w_mask != 0))] = 1
     return binary_img
     
+
+def lab_decompose(img):
+    lab = cv2.cvtColor(img, cv2.COLOR_RGB2Lab).astype(np.float)
+    l = lab[:,:,0]
+    a = lab[:,:,1]
+    b = lab[:,:,2]
+    return l,a,b
+
+def luv_decompose(img):
+    luv = cv2.cvtColor(img, cv2.COLOR_RGB2Luv).astype(np.float)
+    l = luv[:,:,0]
+    u = luv[:,:,1]
+    v = luv[:,:,2]
+    return l,u,v
+
+def strip_horizon(gray, mn = 0, mx = 360):
+    gray[:mn, :] = 0 
+    gray[:mx, :] = 0 
+    return gray 
+
 def filter_colours2(img):
     # Filter white and yellow colours
-    r,g,b = rgb_decompose(img)
-    h,l,s = hls_decompose(img)
-    w = threshold(s,(200,255))
-    y = np.logical_and(threshold(r,(200,255)), threshold(g,(200,255)))
+    l,u,v = luv_decompose(img)
+    w = threshold(l,(127,255))
+    l,a,b = lab_decompose(img)
+    y = threshold(l,(100,255))
     mask = np.logical_or(w,y)
     binary_img = np.zeros_like(img[:, :, 0])
     binary_img[mask] =1

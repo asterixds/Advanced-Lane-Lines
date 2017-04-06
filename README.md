@@ -91,11 +91,11 @@ visualise_in_squaregrid(undistorted_images,"Undistorted Images","output_images/u
 ```
 
 
-![png](output_imgs/output_4_0.png)
+![png](output_images/output_4_0.png)
 
 
 
-![png](output_imgs/output_4_1.png)
+![png](output_images/output_4_1.png)
 
 
 #### Use color transforms, gradients, etc., to create a thresholded binary image.
@@ -106,9 +106,9 @@ The following pipeline of filters generates a binary image with candidate pixels
 
 ```python
 def binarize(img):
-    gx_abs, gy_abs  = gradients_abs(img[:, :, 2],sobel_kernel=15)
-    dir_binary = dir_thresh(gx_abs, gy_abs)
-    mag_binary = mag_thresh(gx_abs, gy_abs)
+    gray = img[:, :, 2]
+    dir_binary = dir_thresh(gray,sobel_kernel=15)
+    mag_binary = mag_thresh(gray,sobel_kernel=15)
     colour_binary = filter_colours(img)
     combined_binary = np.zeros_like(colour_binary)
     combined_binary[((colour_binary == 1) & ((mag_binary == 1) | (dir_binary == 1)))] = 1
@@ -121,11 +121,11 @@ showimage(combined_binary)
 ```
 
 
-![png](output_imgs/output_6_0.png)
+![png](output_images/output_6_0.png)
 
 
 
-![png](output_imgs/output_6_1.png)
+![png](output_images/output_6_1.png)
 
 
 #### Apply a perspective transform to rectify binary image ("birds-eye view").
@@ -166,29 +166,29 @@ undistorted = undistort(img)
 warp, unwarp = create_perspective_warpers(img)
 raw_images = [mpimg.imread(img) for img in glob.glob('test_images/*.jpg')]
 undistorted_images = [undistort(img) for img in raw_images]
-thresholded_images = [binarize(img) for img in undistorted_images]
-warped_images = [warp(img) for img in thresholded_images]
-visualise_in_squaregrid(warped_images,"Bird's eye view of test images","output_images/warped_images.jpg")
+warped_images = [warp(img) for img in undistorted_images]
+warped_binaries = [binarize(img) for img in warped_images]
+visualise_in_squaregrid(warped_binaries,"Bird's eye view of test images","output_images/warped_images.jpg")
 
 
 ```
 
 
-![png](output_imgs/output_10_0.png)
+![png](output_images/output_10_0.png)
 
 
     Undistorted Image with a test trapezoid line
 
 
 
-![png](output_imgs/output_10_2.png)
+![png](output_images/output_10_2.png)
 
 
     Birds eye view of the undistorted image
 
 
 
-![png](output_imgs/output_10_4.png)
+![png](output_images/output_10_4.png)
 
 
 #### Detect lane pixels and fit to find the lane boundary.
@@ -379,7 +379,7 @@ def plot_lane(wb, l_fit, r_fit, l_rad, r_rad, undistorted, unwarp):
     pts = np.hstack((l_xy, r_xy))
     
     # Plot lane on overlay image
-    cv2.fillPoly(overlay, np.int_([pts]), (0,255, 0))
+    cv2.fillPoly(overlay, np.int_([pts]), (0,200, 255))
     
     # Unwarp the overlay and combine with undistorted image
     overlay = unwarp(overlay)
@@ -390,7 +390,9 @@ def plot_lane(wb, l_fit, r_fit, l_rad, r_rad, undistorted, unwarp):
     cv2.putText(combined, "Right Curvature radius: %.0f m" % (r_rad), (40,80), cv2.FONT_HERSHEY_COMPLEX, 1, (255,255,255), 2)
     cv2.putText(combined, "Mean Curvature radius: %.0f m" % ((l_rad+r_rad)/2), (40,120), cv2.FONT_HERSHEY_COMPLEX, 1, (255,255,255), 2)
     # plot offset from centre
-    cv2.putText(combined, "Car position: %.2f m" % ((np.average((l_fit_x + r_fit_x)/2) - w//2)*c.XM_PP), (40,160), cv2.FONT_HERSHEY_COMPLEX, 1, (255,255,255), 2)
+    l_bottom = l_fit_x[-1]
+    r_bottom = r_fit_x[-1]
+    cv2.putText(combined, "Car position: %.2f m" % ((np.average((l_bottom + r_bottom)/2) - w//2)*c.XM_PP), (40,160), cv2.FONT_HERSHEY_COMPLEX, 1, (255,255,255), 2)
     return combined
 ```
 
@@ -400,22 +402,22 @@ The lane detection and curve plots are illustrated below.
 ```python
 
 img = mpimg.imread('test_images/test3.jpg')
-if len(img.shape) > 2 and img.shape[2] == 4:
-    img = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
+#if len(img.shape) > 2 and img.shape[2] == 4:
+#    img = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
 undistorted = undistort(img)
 showimage(undistorted)
 binarized = binarize(undistorted)
-warper, unwarper = create_perspective_warpers(undistorted)
-warped = warper(binarized)
+warp, unwarp = create_perspective_warpers(binarized)
+wb = warp(binarized)
 print("Bird's eye binary image")
-showimage(warped)
-l_fit, r_fit = hist_search(warped)
-res_img = plot_curves(warped,l_fit,r_fit)
+showimage(wb)
+l_fit, r_fit = hist_search(wb)
+res_img = plot_curves(wb,l_fit,r_fit)
 print("Curve plots of lanes detected from histogram search")
 showimage(res_img)
-l_fit, r_fit = local_search(warped,l_fit,r_fit, plot=True )
-l_rad, r_rad = curvature_in_meters(warped,l_fit, r_fit)
-res_img = plot_lane(warped,l_fit,r_fit,l_rad, r_rad,undistorted, unwarper )
+l_fit, r_fit = local_search(wb,l_fit,r_fit, plot=True )
+l_rad, r_rad = curvature_in_meters(wb,l_fit, r_fit)
+res_img = plot_lane(wb,l_fit,r_fit,l_rad, r_rad,undistorted, unwarp )
 print("Fully annotated image after local search, unwarping and curvature + position calclulation")
 showimage(res_img)
 
@@ -424,28 +426,28 @@ showimage(res_img)
 ```
 
 
-![png](output_imgs/output_19_0.png)
+![png](output_images/output_19_0.png)
 
 
     Bird's eye binary image
 
 
 
-![png](output_imgs/output_19_2.png)
+![png](output_images/output_19_2.png)
 
 
     Curve plots of lanes detected from histogram search
 
 
 
-![png](output_imgs/output_19_4.png)
+![png](output_images/output_19_4.png)
 
 
     Fully annotated image after local search, unwarping and curvature + position calclulation
 
 
 
-![png](output_imgs/output_19_6.png)
+![png](output_images/output_19_6.png)
 
 
 ###Pipeline (video)
@@ -460,7 +462,7 @@ Here's a link to my video result:
 
 ```python
 from IPython.display import YouTubeVideo
-YouTubeVideo('zXorXzTaDHI')
+YouTubeVideo('NfIfQjMMCR4')
 ```
 
 
@@ -497,8 +499,8 @@ def pipeline(relevant_hist=c.RELEVANT_HIST):
         return np.average(l_fits,0,weights[-len(l_fits):]), np.average(r_fits,0,weights[-len(l_fits):])
                    
          
-    def process_image(img0):
-        undistorted = undistort(img0)
+    def process_image(img):
+        undistorted = undistort(img)
         wb = warp(binarize(undistorted))
         l_fit, r_fit = hist_search(wb) if ((len(l_fits)==0) ) else local_search(wb,np.average(l_fits,0,weights[-len(l_fits):]), np.average(r_fits,0,weights[-len(l_fits):]))
         append(l_fit, r_fit)
@@ -511,7 +513,7 @@ def pipeline(relevant_hist=c.RELEVANT_HIST):
 # #+RESULTS:
 
 in_clip = VideoFileClip("project_video.mp4")
-#in_clip = in_clip.subclip(30, 51)
+#in_clip = in_clip.subclip(30, 50)
 out_clip = in_clip.fl_image(pipeline(5))
 cProfile.run('out_clip.write_videofile("output_images/project_output.mp4", audio=False)', 'restats')
 ```
@@ -521,7 +523,7 @@ cProfile.run('out_clip.write_videofile("output_images/project_output.mp4", audio
     [MoviePy] Writing video output_images/project_output.mp4
 
 
-    100%|█████████▉| 1260/1261 [03:53<00:00,  5.35it/s]
+    100%|█████████▉| 1260/1261 [04:50<00:00,  4.26it/s]
 
 
     [MoviePy] Done.
